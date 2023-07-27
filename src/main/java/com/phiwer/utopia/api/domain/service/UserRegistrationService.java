@@ -1,15 +1,23 @@
 package com.phiwer.utopia.api.domain.service;
 
 import com.phiwer.utopia.api.domain.model.user.Email;
+import com.phiwer.utopia.api.domain.model.user.Role;
 import com.phiwer.utopia.api.domain.model.user.User;
 import com.phiwer.utopia.api.domain.model.user.UserRepository;
 import io.micrometer.common.util.StringUtils;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 public class UserRegistrationService {
 
-    public static UserRegistrationResult registerNewUser(final UserRepository userRepository, final String email, final String firstName, final String lastName, final String password, final String matchingPassword) {
+    public static UserRegistrationResult registerNewUser(final UserRepository userRepository, PasswordEncoder passwordEncoder, final String username, final String email, final String firstName, final String lastName, final String password, final String matchingPassword, Role initialRole) {
         UserRegistrationResult result = new UserRegistrationResult();
-        if (userRepository.findByEmailIgnoreCase(email).size() > 0) {
+
+        if (StringUtils.isEmpty(username)) {
+            result.addError("username", "Username cannot be empty or null");
+        }
+
+
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             result.addError("email", "Email address must be unique");
         }
 
@@ -37,7 +45,7 @@ public class UserRegistrationService {
             result.addError("matchingPassword", "Matching password cannot be empty or null");
         }
 
-        if(password.length() > 0 && !password.equals(matchingPassword)) {
+        if (password.length() > 0 && !password.equals(matchingPassword)) {
             result.addError("matchingPassword", "Matching password must match password");
         }
 
@@ -45,7 +53,7 @@ public class UserRegistrationService {
             return result;
         }
 
-        User user = new User(email, firstName, lastName, password);
+        User user = new User(username, email, firstName, lastName, passwordEncoder.encode(password), initialRole);
         userRepository.save(user);
 
         result.setNewUserId(user.getId());
